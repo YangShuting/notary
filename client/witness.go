@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/theupdateframework/notary/client/changelist"
+	"github.com/YangShuting/notary/client/changelist"
 	"github.com/theupdateframework/notary/tuf"
 	"github.com/theupdateframework/notary/tuf/data"
 )

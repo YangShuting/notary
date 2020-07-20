@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/theupdateframework/notary/client/changelist"
+	"github.com/YangShuting/notary/client/changelist"
 	store "github.com/theupdateframework/notary/storage"
 	"github.com/theupdateframework/notary/tuf"
 	"github.com/theupdateframework/notary/tuf/data"
@@ -17,6 +17,7 @@ import (
 
 // Use this to initialize remote HTTPStores from the config settings
 func getRemoteStore(baseURL string, gun data.GUN, rt http.RoundTripper) (store.RemoteStore, error) {
+	fmt.Printf("**调试** getRemoteStore, baseURL:%+v, gun: %+v\n", baseURL, gun)
 	s, err := store.NewHTTPStore(
 		baseURL+"/v2/"+gun.String()+"/_trust/tuf/",
 		"",

@@ -14,7 +14,7 @@ import (
 	canonicaljson "github.com/docker/go/canonical/json"
 	"github.com/sirupsen/logrus"
 	"github.com/theupdateframework/notary"
-	"github.com/theupdateframework/notary/client/changelist"
+	"github.com/YangShuting/notary/client/changelist"
 	"github.com/theupdateframework/notary/cryptoservice"
 	store "github.com/theupdateframework/notary/storage"
 	"github.com/theupdateframework/notary/trustpinning"
@@ -60,6 +60,7 @@ type repository struct {
 func NewFileCachedRepository(baseDir string, gun data.GUN, baseURL string, rt http.RoundTripper,
 	retriever notary.PassRetriever, trustPinning trustpinning.TrustPinConfig) (Repository, error) {
 
+	fmt.Printf("**调试** NewFileCachedRepository, baseDir: %+v, gun: %+v, baseURL: %+v, rt: %+v, trustPinning: %+v\n", baseDir, gun, baseURL, rt, trustPinning)	
 	cache, err := store.NewFileStore(
 		filepath.Join(baseDir, tufDir, filepath.FromSlash(gun.String()), "metadata"),
 		"json",
@@ -76,6 +77,7 @@ func NewFileCachedRepository(baseDir string, gun data.GUN, baseURL string, rt ht
 	cryptoService := cryptoservice.NewCryptoService(keyStores...)
 
 	remoteStore, err := getRemoteStore(baseURL, gun, rt)
+	fmt.Printf("remoteStore: %+v\n", remoteStore)
 	if err != nil {
 		// baseURL is syntactically invalid
 		return nil, err
@@ -88,6 +90,10 @@ func NewFileCachedRepository(baseDir string, gun data.GUN, baseURL string, rt ht
 		return nil, err
 	}
 
+	fmt.Printf("changelist file path: %+v\n", filepath.Join(
+		filepath.Join(baseDir, tufDir, filepath.FromSlash(gun.String()), "changelist"),
+	))
+
 	return NewRepository(gun, baseURL, remoteStore, cache, trustPinning, cryptoService, cl)
 }
 
@@ -97,7 +103,8 @@ func NewFileCachedRepository(baseDir string, gun data.GUN, baseURL string, rt ht
 func NewRepository(gun data.GUN, baseURL string, remoteStore store.RemoteStore, cache store.MetadataStore,
 	trustPinning trustpinning.TrustPinConfig, cryptoService signed.CryptoService, cl changelist.Changelist) (Repository, error) {
 
-	// Repo's remote store is either a valid remote store or an OfflineStore
+	fmt.Printf("**调试** NewRepository")
+		// Repo's remote store is either a valid remote store or an OfflineStore
 	if remoteStore == nil {
 		remoteStore = store.OfflineStore{}
 	}
@@ -117,6 +124,7 @@ func NewRepository(gun data.GUN, baseURL string, remoteStore store.RemoteStore, 
 		LegacyVersions: 0, // By default, don't sign with legacy roles
 	}
 
+	fmt.Printf("nRepo: %+v\n, nRepo.cl: %+v\n", nRepo, nRepo.cl)
 	return nRepo, nil
 }
 
@@ -126,6 +134,7 @@ func (r *repository) GetGUN() data.GUN {
 }
 
 func (r *repository) updateTUF(forWrite bool) error {
+	fmt.Println("**调试** updateTUF")
 	repo, invalid, err := LoadTUFRepo(TUFLoadOptions{
 		GUN:                    r.gun,
 		TrustPinning:           r.trustPinning,
@@ -144,6 +153,7 @@ func (r *repository) updateTUF(forWrite bool) error {
 
 // ListTargets calls update first before listing targets
 func (r *repository) ListTargets(roles ...data.RoleName) ([]*TargetWithRole, error) {
+	fmt.Println("**调试** ListTargets")
 	if err := r.updateTUF(false); err != nil {
 		return nil, err
 	}
@@ -152,6 +162,7 @@ func (r *repository) ListTargets(roles ...data.RoleName) ([]*TargetWithRole, err
 
 // GetTargetByName calls update first before getting target by name
 func (r *repository) GetTargetByName(name string, roles ...data.RoleName) (*TargetWithRole, error) {
+	fmt.Println("**调试** GetTargetByName")
 	if err := r.updateTUF(false); err != nil {
 		return nil, err
 	}
@@ -160,6 +171,7 @@ func (r *repository) GetTargetByName(name string, roles ...data.RoleName) (*Targ
 
 // GetAllTargetMetadataByName calls update first before getting targets by name
 func (r *repository) GetAllTargetMetadataByName(name string) ([]TargetSignedStruct, error) {
+	fmt.Println("**调试** GetAllTargetMetadataByName")
 	if err := r.updateTUF(false); err != nil {
 		return nil, err
 	}
@@ -169,6 +181,7 @@ func (r *repository) GetAllTargetMetadataByName(name string) ([]TargetSignedStru
 
 // ListRoles calls update first before getting roles
 func (r *repository) ListRoles() ([]RoleWithSignatures, error) {
+	fmt.Println("**调试** ListRoles")
 	if err := r.updateTUF(false); err != nil {
 		return nil, err
 	}
@@ -177,6 +190,7 @@ func (r *repository) ListRoles() ([]RoleWithSignatures, error) {
 
 // GetDelegationRoles calls update first before getting all delegation roles
 func (r *repository) GetDelegationRoles() ([]data.Role, error) {
+	fmt.Println("**调试** GetDelegationRoles")
 	if err := r.updateTUF(false); err != nil {
 		return nil, err
 	}
@@ -185,6 +199,7 @@ func (r *repository) GetDelegationRoles() ([]data.Role, error) {
 
 // NewTarget is a helper method that returns a Target
 func NewTarget(targetName, targetPath string, targetCustom *canonicaljson.RawMessage) (*Target, error) {
+	fmt.Println("**调试** NewTarget")
 	b, err := ioutil.ReadFile(targetPath)
 	if err != nil {
 		return nil, err
@@ -200,6 +215,7 @@ func NewTarget(targetName, targetPath string, targetCustom *canonicaljson.RawMes
 
 // rootCertKey generates the corresponding certificate for the private key given the privKey and repo's GUN
 func rootCertKey(gun data.GUN, privKey data.PrivateKey) (data.PublicKey, error) {
+	fmt.Println("**调试** rootCertKey")
 	// Hard-coded policy: the generated certificate expires in 10 years.
 	startTime := time.Now()
 	cert, err := cryptoservice.GenerateCertificate(
@@ -223,6 +239,7 @@ func (r *repository) GetCryptoService() signed.CryptoService {
 
 // initialize initializes the notary repository with a set of rootkeys, root certificates and roles.
 func (r *repository) initialize(rootKeyIDs []string, rootCerts []data.PublicKey, serverManagedRoles ...data.RoleName) error {
+	fmt.Println("**调试** initialize")
 
 	// currently we only support server managing timestamps and snapshots, and
 	// nothing else - timestamps are always managed by the server, and implicit
@@ -301,6 +318,8 @@ func (r *repository) initialize(rootKeyIDs []string, rootCerts []data.PublicKey,
 // key IDs existing in the repository's CryptoService.
 // the public keys returned are ordered to correspond to the keyIDs
 func (r *repository) createNewPublicKeyFromKeyIDs(keyIDs []string) ([]data.PublicKey, error) {
+	fmt.Println("**调试** createNewPublicKeyFromKeyIDs")
+
 	publicKeys := []data.PublicKey{}
 
 	privKeys, err := getAllPrivKeys(keyIDs, r.GetCryptoService())
@@ -322,6 +341,8 @@ func (r *repository) createNewPublicKeyFromKeyIDs(keyIDs []string) ([]data.Publi
 // (eg. keyIDs[0] must match pubKeys[0] and keyIDs[1] must match certs[1] and so on).
 // Or throw error when they mismatch.
 func (r *repository) publicKeysOfKeyIDs(keyIDs []string, pubKeys []data.PublicKey) ([]data.PublicKey, error) {
+	fmt.Println("**调试** publicKeysOfKeyIDs")
+
 	if len(keyIDs) != len(pubKeys) {
 		err := fmt.Errorf("require matching number of keyIDs and public keys but got %d IDs and %d public keys", len(keyIDs), len(pubKeys))
 		return nil, err
@@ -336,6 +357,8 @@ func (r *repository) publicKeysOfKeyIDs(keyIDs []string, pubKeys []data.PublicKe
 // matchKeyIdsWithPubKeys validates that the private keys (represented by their IDs) and the public keys
 // forms matching key pairs
 func matchKeyIdsWithPubKeys(r *repository, ids []string, pubKeys []data.PublicKey) error {
+	fmt.Println("**调试** matchKeyIdsWithPubKeyss")
+
 	for i := 0; i < len(ids); i++ {
 		privKey, _, err := r.GetCryptoService().GetPrivateKey(ids[i])
 		if err != nil {
@@ -537,6 +560,7 @@ func (r *repository) GetChangelist() (changelist.Changelist, error) {
 // getRemoteStore returns the remoteStore of a repository if valid or
 // or an OfflineStore otherwise
 func (r *repository) getRemoteStore() store.RemoteStore {
+	fmt.Println("**调试** getRemoteStore")
 	if r.remoteStore != nil {
 		return r.remoteStore
 	}
